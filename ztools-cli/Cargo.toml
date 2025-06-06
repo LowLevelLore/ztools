@@ -1,0 +1,12 @@
+[package]
+name = "ztools-cli"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+clap = { version = "4.4", features = ["derive"] }
+ztools-core = { path = "../ztools-core" }
+
+[[bin]]
+name = "ztools"
+path = "src/main.rs"

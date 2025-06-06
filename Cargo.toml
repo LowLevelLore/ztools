@@ -1,0 +1,2 @@
+[workspace]
+members = ["ztools-cli", "ztools-core"]
