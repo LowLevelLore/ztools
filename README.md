@@ -78,19 +78,18 @@
    ```sh
    ztools zip <file-or-dir> [--gzip] [--7z] [-f <base>]
    ```
-   - ### `<file-or-dir>`
+   - `<file-or-dir>`
 
      Path to a file or directory to compress.
-   - ### `--gzip`
+   - `--gzip`
 
      Force Gzip compression (also the default if neither `--gzip` nor `--7z` is provided).
-   - ### `--7z`
+   - `--7z`
 
      Use 7-Zip compression instead of Gzip.
-   - ### `-f <base>`
+   - `-f <base>`
 
      Override the output base name (no extension).
-
 
      - If the input is a **single file**, the output will be `<base>.<orig_ext>.gz` for Gzip or `<base>.7z` for 7-Zip.
      - If the input is a **directory**, the output will be `<base>.tar.gz` for Gzip or `<base>.7z` for 7-Zip.
@@ -99,13 +98,12 @@
    ```sh
    ztools unzip <archive-file> [-f <base>]
    ```
-   - ### `<archive-file>`
+   - `<archive-file>`
 
      Path to the archive file to decompress. Supported formats: `.gz`, `.tar.gz`, `.tgz`, `.7z`.
-   - ### `-f <base>`
+   - `-f <base>`
 
      Override the output base name (no extension or folder).
-
 
      - For a single-file Gzip archive (`file.txt.gz`), `-f output` will create `output.txt`.
      - For a directory archive (`dir.tar.gz`, `.tgz`, or `.7z`), `-f output` will extract into a folder named `output/`.
