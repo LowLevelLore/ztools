@@ -1,9 +1,16 @@
 use clap::{Parser, Subcommand};
 use colored::Colorize;
 use confy;
+use libunftp::Server;
+use libunftp::options::Shutdown;
 use std::env;
+use std::net::TcpListener;
 use std::path::Path;
+use std::path::PathBuf;
+use tokio::signal;
+use unftp_sbe_fs::ServerExt;
 use ztools_core::ZToolsError;
+use ztools_core::repr::Representations;
 use ztools_core::zipper::CompressionAlgorithm;
 
 static _VERSION: &str = "0.0.1";
@@ -58,9 +65,20 @@ enum Commands {
         #[arg(last = true, trailing_var_arg = true)]
         args: Vec<String>,
     },
+
+    Convert {
+        value: String,
+        #[arg(short, long, default_value = "d")]
+        to: Representations,
+    },
+
+    Ftp {
+        dir: String,
+        #[arg(short, long, default_value = "6969")]
+        port: String,
+    },
 }
 
-/// Load or initialize configuration
 fn load_config() -> ZtoolsConfig {
     match confy::load("ztools", "config") {
         Ok(cfg) => cfg,
@@ -75,7 +93,6 @@ fn load_config() -> ZtoolsConfig {
     }
 }
 
-/// Handle ZToolsError uniformly
 fn handle_error(err: ZToolsError) {
     match err {
         ZToolsError::Io(e) => eprintln!("{}", format!("I/O error: {}", e).red()),
@@ -94,7 +111,47 @@ fn handle_error(err: ZToolsError) {
     }
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn port_is_available(port: u16) -> bool {
+    match TcpListener::bind(("127.0.0.1", port)) {
+        Ok(_) => true,
+        Err(_) => false,
+    }
+}
+
+async fn start_ftp_server(dir: String, port: u16) {
+    let path = PathBuf::from(&dir);
+
+    if !path.is_dir() {
+        eprintln!("{} is not a valid directory", dir);
+        return;
+    }
+    if !port_is_available(port) {
+        eprintln!("Port {port} is not available");
+        return;
+    }
+
+    let shutdown = async {
+        signal::ctrl_c().await.expect("failed to listen for ctrl-c");
+        Shutdown::new()
+    };
+
+    let server = Server::with_fs(path)
+        .greeting("Welcome ztools File Server by xZist")
+        .passive_ports(50000..=65535)
+        .shutdown_indicator(shutdown)
+        .build()
+        .unwrap();
+
+    // directly await the listen future
+    if let Err(e) = server.listen(format!("0.0.0.0:{}", port)).await {
+        eprintln!("FTP server terminated with error: {e}");
+    } else {
+        println!("FTP server exited cleanly");
+    }
+}
+
+#[tokio::main]
+pub async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
     let config = load_config();
 
@@ -132,7 +189,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 handle_error(err);
             }
         }
-
         Commands::Unzip { file, outfile } => {
             let base_name = if let Some(ref f) = outfile {
                 f.clone()
@@ -159,11 +215,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 handle_error(err);
             }
         }
-
         Commands::Run { name, args } => {
             if let Err(err) = ztools_core::run_script(&name, &config.scripts_directory, &args) {
                 handle_error(err);
             }
+        }
+        Commands::Convert { value, to } => match ztools_core::convert_repr(&value, to.clone()) {
+            Ok(result) => println!("{}", result),
+            Err(err) => eprintln!("Error: {}", err),
+        },
+        Commands::Ftp { dir, port } => {
+            start_ftp_server(dir, port.parse().expect("Invalid Port Number")).await;
         }
     }
 

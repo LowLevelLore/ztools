@@ -1,7 +1,9 @@
+pub mod repr;
 pub mod scripts;
 pub mod zipper;
-pub use scripts::run_script;
 
+pub use repr::convert_repr;
+pub use scripts::run_script;
 use std::fmt;
 use std::io;
 
